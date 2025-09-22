@@ -2,345 +2,425 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phone Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone-Controlled Particle Clouds</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <style>
-        :root {
-            --user-hue: 0;
-            --bg-color: hsl(var(--user-hue), 70%, 50%);
-            --text-color: white;
-        }
-
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-color);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             overflow: hidden;
-            transition: background 0.3s ease;
-        }
-
-        #status {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 2rem;
-            text-align: center;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        #info {
-            background: rgba(0,0,0,0.2);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            width: 90%;
-            max-width: 400px;
-            backdrop-filter: blur(10px);
-        }
-
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 0.5rem 0;
-            font-size: 1.2rem;
-        }
-
-        .data-label {
-            opacity: 0.9;
-        }
-
-        .data-value {
-            font-weight: bold;
+            background: #111;
             font-family: monospace;
-            min-width: 80px;
-            text-align: right;
         }
-
-        #touch-area {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
-
-        .touch-point {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.5);
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            animation: pulse 0.5s ease-out;
-        }
-
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-        }
-
-        #server-input {
-            margin-top: 2rem;
-            padding: 0.75rem;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 0.5rem;
-            width: 100%;
-            text-align: center;
-            background: rgba(255,255,255,0.9);
-            color: #333;
-        }
-
-        #connect-btn {
-            margin-top: 1rem;
-            padding: 0.75rem 2rem;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 0.5rem;
-            background: rgba(0,0,0,0.3);
+        
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
             color: white;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
-            transition: background 0.2s;
+            font-size: 14px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
         }
-
-        #connect-btn:active {
-            background: rgba(0,0,0,0.5);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #error {
-            background: rgba(255,0,0,0.3);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            text-align: center;
+        
+        #controls {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-size: 12px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <div id="status">NOT CONNECTED</div>
-    
     <div id="info">
-        <div id="connection-form">
-            <input type="text" id="server-input" placeholder="Enter server address" value="ws://localhost:8080">
-            <button id="connect-btn">CONNECT</button>
-        </div>
-        
-        <div id="sensor-data" class="hidden">
-            <div class="data-row">
-                <span class="data-label">Tilt X:</span>
-                <span class="data-value" id="tilt-x">0°</span>
-            </div>
-            <div class="data-row">
-                <span class="data-label">Tilt Y:</span>
-                <span class="data-value" id="tilt-y">0°</span>
-            </div>
-            <div class="data-row">
-                <span class="data-label">Rotate:</span>
-                <span class="data-value" id="rotate">0°</span>
-            </div>
-            <div class="data-row">
-                <span class="data-label">Touch:</span>
-                <span class="data-value" id="touch-pos">none</span>
-            </div>
-        </div>
-        
-        <div id="error" class="hidden"></div>
+        <div id="status">Connecting...</div>
+        <div id="device-count">0 devices connected</div>
     </div>
     
-    <div id="touch-area"></div>
+    <div id="controls">
+        Press 'C' to clear particles • Press 'R' to reconnect<br>
+        Phones connect to: hello-world-production-bbc3.up.railway.app
+    </div>
 
     <script>
-        // Generate unique color for each user based on timestamp
-        const userHue = Date.now() % 360;
-        document.documentElement.style.setProperty('--user-hue', userHue);
-        
-        let socket = null;
-        let deviceId = `user-${Math.floor(Math.random() * 1000)}`;
-        let lastData = {};
-        
-        // UI Elements
-        const statusEl = document.getElementById('status');
-        const serverInput = document.getElementById('server-input');
-        const connectBtn = document.getElementById('connect-btn');
-        const connectionForm = document.getElementById('connection-form');
-        const sensorData = document.getElementById('sensor-data');
-        const errorEl = document.getElementById('error');
-        
-        // Connect button handler
-        connectBtn.addEventListener('click', connect);
-        serverInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') connect();
-        });
-        
-        function connect() {
-            const serverAddress = serverInput.value.trim();
-            if (!serverAddress) {
-                showError('Please enter a server address');
-                return;
-            }
+        let ws;
+        let devices = new Map();
+        let particles = new Map();
+        let connectionStatus = "Connecting...";
+        let deviceCount = 0;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            colorMode(HSB, 360, 100, 100, 100);
             
-            statusEl.textContent = 'CONNECTING...';
-            errorEl.classList.add('hidden');
-            
+            // Connect to Railway WebSocket server
+            connectToServer();
+        }
+
+        function connectToServer() {
             try {
-                socket = new WebSocket(serverAddress);
+                ws = new WebSocket('wss://hello-world-production-bbc3.up.railway.app');
                 
-                socket.onopen = () => {
-                    statusEl.textContent = 'CONNECTED';
-                    connectionForm.classList.add('hidden');
-                    sensorData.classList.remove('hidden');
-                    
-                    // Send initial handshake
-                    sendData({
-                        type: 'connect',
-                        deviceId: deviceId,
-                        color: userHue
-                    });
-                    
-                    // Start sensor listening
-                    startSensors();
+                ws.onopen = () => {
+                    connectionStatus = "Connected";
+                    updateStatusDisplay();
+                    console.log("Connected to server!");
                 };
                 
-                socket.onclose = () => {
-                    statusEl.textContent = 'DISCONNECTED';
-                    connectionForm.classList.remove('hidden');
-                    sensorData.classList.add('hidden');
-                    socket = null;
+                ws.onmessage = (event) => {
+                    console.log("Raw message received:", event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log("Parsed message:", data);
+                        handleServerMessage(data);
+                    } catch (e) {
+                        console.log("Non-JSON message:", event.data);
+                    }
                 };
                 
-                socket.onerror = (error) => {
-                    showError('Connection failed. Is the server running?');
-                    statusEl.textContent = 'NOT CONNECTED';
+                ws.onclose = () => {
+                    connectionStatus = "Disconnected - Reconnecting...";
+                    updateStatusDisplay();
+                    console.log("Disconnected, attempting reconnect...");
+                    setTimeout(connectToServer, 3000);
+                };
+                
+                ws.onerror = (error) => {
+                    connectionStatus = "Connection Error";
+                    updateStatusDisplay();
+                    console.error("WebSocket error:", error);
                 };
                 
             } catch (error) {
-                showError('Invalid server address');
-                statusEl.textContent = 'NOT CONNECTED';
+                connectionStatus = "Failed to connect";
+                updateStatusDisplay();
+                console.error("Connection failed:", error);
+                setTimeout(connectToServer, 5000);
             }
         }
-        
-        function showError(message) {
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
-            setTimeout(() => {
-                errorEl.classList.add('hidden');
-            }, 3000);
+
+        function updateStatusDisplay() {
+            document.getElementById('status').textContent = connectionStatus;
+            document.getElementById('device-count').textContent = `${deviceCount} devices connected`;
         }
-        
-        function sendData(data) {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    ...data,
-                    deviceId: deviceId,
-                    timestamp: Date.now()
-                }));
+
+        function handleServerMessage(data) {
+            const deviceId = data.deviceId;
+            
+            switch(data.type) {
+                case 'connect':
+                    addDevice(deviceId, data.color);
+                    break;
+                    
+                case 'orientation':
+                    updateDeviceOrientation(deviceId, data.tiltX, data.tiltY, data.rotate);
+                    break;
+                    
+                case 'touch':
+                    handleDeviceTouch(deviceId, data.x, data.y, data.touches);
+                    break;
             }
         }
-        
-        function startSensors() {
-            // Request permissions and start device orientation
-            if (typeof DeviceOrientationEvent !== 'undefined') {
-                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    // iOS 13+ requires permission
-                    DeviceOrientationEvent.requestPermission()
-                        .then(response => {
-                            if (response === 'granted') {
-                                addOrientationListener();
-                            }
-                        })
-                        .catch(console.error);
-                } else {
-                    // Non-iOS or older iOS
-                    addOrientationListener();
-                }
+
+        function addDevice(deviceId, colorHue) {
+            console.log(`Adding device: ${deviceId} with color ${colorHue}°`);
+            
+            // Store device info
+            devices.set(deviceId, {
+                color: colorHue,
+                tiltX: 0,
+                tiltY: 0,
+                rotate: 0,
+                touchX: 0.5,
+                touchY: 0.5,
+                touching: false,
+                lastSeen: millis(),
+                targetX: width / 2,
+                targetY: height / 2
+            });
+            
+            // Create particle system for this device
+            particles.set(deviceId, createParticleSystem(colorHue));
+            
+            deviceCount = devices.size;
+            updateStatusDisplay();
+        }
+
+        function createParticleSystem(colorHue) {
+            const particleArray = [];
+            
+            // Create initial particles scattered around center
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            for (let i = 0; i < 40; i++) {
+                particleArray.push({
+                    x: centerX + random(-100, 100),
+                    y: centerY + random(-100, 100),
+                    vx: random(-1, 1),
+                    vy: random(-1, 1),
+                    life: random(150, 255),
+                    maxLife: random(150, 255),
+                    size: random(4, 10),
+                    hue: colorHue + random(-40, 40),
+                    baseHue: colorHue
+                });
             }
             
-            // Touch events
-            document.addEventListener('touchstart', handleTouch);
-            document.addEventListener('touchmove', handleTouch);
-            document.addEventListener('touchend', handleTouchEnd);
+            return particleArray;
         }
-        
-        function addOrientationListener() {
-            window.addEventListener('deviceorientation', (e) => {
-                const tiltX = Math.round(e.beta);  // -180 to 180
-                const tiltY = Math.round(e.gamma); // -90 to 90
-                const rotate = Math.round(e.alpha); // 0 to 360
+
+        function updateDeviceOrientation(deviceId, tiltX, tiltY, rotate) {
+            const device = devices.get(deviceId);
+            if (device) {
+                device.tiltX = tiltX;
+                device.tiltY = tiltY;
+                device.rotate = rotate;
+                device.lastSeen = millis();
                 
-                // Update display
-                document.getElementById('tilt-x').textContent = `${tiltX}°`;
-                document.getElementById('tilt-y').textContent = `${tiltY}°`;
-                document.getElementById('rotate').textContent = `${rotate}°`;
+                // Map tilt to screen position with some bounds
+                // tiltY: -90 to 90 → margin to width-margin
+                // tiltX: -180 to 180 → margin to height-margin
+                const margin = 100;
+                device.targetX = map(constrain(tiltY, -60, 60), -60, 60, margin, width - margin);
+                device.targetY = map(constrain(tiltX, -120, 120), -120, 120, margin, height - margin);
+            }
+        }
+
+        function handleDeviceTouch(deviceId, touchX, touchY, touchCount) {
+            const device = devices.get(deviceId);
+            if (device) {
+                device.touchX = touchX;
+                device.touchY = touchY;
+                device.touching = touchCount > 0;
+                device.lastSeen = millis();
                 
-                // Only send if changed significantly
-                if (Math.abs(lastData.tiltX - tiltX) > 2 || 
-                    Math.abs(lastData.tiltY - tiltY) > 2 || 
-                    Math.abs(lastData.rotate - rotate) > 2) {
+                // Add particles on touch
+                if (touchCount > 0) {
+                    addTouchParticles(deviceId, touchX * width, touchY * height);
+                }
+            }
+        }
+
+        function addTouchParticles(deviceId, x, y) {
+            const deviceParticles = particles.get(deviceId);
+            const device = devices.get(deviceId);
+            
+            if (deviceParticles && device) {
+                // Add burst of particles at touch location
+                for (let i = 0; i < 15; i++) {
+                    deviceParticles.push({
+                        x: x + random(-30, 30),
+                        y: y + random(-30, 30),
+                        vx: random(-8, 8),
+                        vy: random(-8, 8),
+                        life: 200,
+                        maxLife: 200,
+                        size: random(3, 8),
+                        hue: device.color + random(-30, 30),
+                        baseHue: device.color
+                    });
+                }
+            }
+        }
+
+        function updateParticles() {
+            // Clean up disconnected devices
+            const currentTime = millis();
+            devices.forEach((device, deviceId) => {
+                if (currentTime - device.lastSeen > 10000) { // 10 second timeout
+                    devices.delete(deviceId);
+                    particles.delete(deviceId);
+                    deviceCount = devices.size;
+                    updateStatusDisplay();
+                    console.log(`Removed inactive device: ${deviceId}`);
+                }
+            });
+            
+            particles.forEach((particleArray, deviceId) => {
+                const device = devices.get(deviceId);
+                if (!device) return;
+                
+                // Calculate forces from device orientation
+                const gravityX = map(device.tiltY, -90, 90, -0.3, 0.3);
+                const gravityY = map(device.tiltX, -180, 180, -0.3, 0.3);
+                const rotationForce = map(device.rotate, 0, 360, -0.05, 0.05);
+                
+                // Update each particle
+                for (let i = particleArray.length - 1; i >= 0; i--) {
+                    const p = particleArray[i];
                     
-                    lastData = { tiltX, tiltY, rotate };
-                    sendData({
-                        type: 'orientation',
-                        tiltX: tiltX,
-                        tiltY: tiltY,
-                        rotate: rotate
+                    // Apply gravity from phone tilt
+                    p.vx += gravityX;
+                    p.vy += gravityY;
+                    
+                    // Add subtle rotation influence around target
+                    const dx = p.x - device.targetX;
+                    const dy = p.y - device.targetY;
+                    const distance = sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        p.vx += (dy / distance) * rotationForce * 0.5;
+                        p.vy -= (dx / distance) * rotationForce * 0.5;
+                    }
+                    
+                    // Attraction to target position
+                    const attractionStrength = device.touching ? 0.015 : 0.003;
+                    const attractX = (device.targetX - p.x) * attractionStrength;
+                    const attractY = (device.targetY - p.y) * attractionStrength;
+                    
+                    p.vx += attractX;
+                    p.vy += attractY;
+                    
+                    // Update position
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    
+                    // Add drag
+                    p.vx *= 0.97;
+                    p.vy *= 0.97;
+                    
+                    // Bounce off edges
+                    if (p.x < 0 || p.x > width) {
+                        p.vx *= -0.8;
+                        p.x = constrain(p.x, 0, width);
+                    }
+                    if (p.y < 0 || p.y > height) {
+                        p.vy *= -0.8;
+                        p.y = constrain(p.y, 0, height);
+                    }
+                    
+                    // Age particle
+                    p.life -= 0.8;
+                    
+                    // Remove dead particles
+                    if (p.life <= 0) {
+                        particleArray.splice(i, 1);
+                    }
+                }
+                
+                // Maintain minimum particle count
+                while (particleArray.length < 25) {
+                    particleArray.push({
+                        x: device.targetX + random(-80, 80),
+                        y: device.targetY + random(-80, 80),
+                        vx: random(-2, 2),
+                        vy: random(-2, 2),
+                        life: random(120, 180),
+                        maxLife: random(120, 180),
+                        size: random(4, 9),
+                        hue: device.color + random(-35, 35),
+                        baseHue: device.color
                     });
                 }
             });
         }
-        
-        function handleTouch(e) {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const x = touch.clientX / window.innerWidth;
-            const y = touch.clientY / window.innerHeight;
-            
-            // Update display
-            document.getElementById('touch-pos').textContent = 
-                `${Math.round(x * 100)}%, ${Math.round(y * 100)}%`;
-            
-            // Visual feedback
-            const point = document.createElement('div');
-            point.className = 'touch-point';
-            point.style.left = touch.clientX + 'px';
-            point.style.top = touch.clientY + 'px';
-            document.getElementById('touch-area').appendChild(point);
-            setTimeout(() => point.remove(), 500);
-            
-            // Send data
-            sendData({
-                type: 'touch',
-                x: x,
-                y: y,
-                touches: e.touches.length
+
+        function drawParticles() {
+            particles.forEach((particleArray, deviceId) => {
+                const device = devices.get(deviceId);
+                if (!device) return;
+                
+                particleArray.forEach(p => {
+                    const alpha = map(p.life, 0, p.maxLife, 0, 90);
+                    const brightness = device.touching ? 100 : 80;
+                    
+                    fill(p.hue % 360, 65, brightness, alpha);
+                    noStroke();
+                    
+                    push();
+                    translate(p.x, p.y);
+                    // Subtle rotation based on velocity
+                    rotate(atan2(p.vy, p.vx));
+                    ellipse(0, 0, p.size, p.size * 0.7);
+                    pop();
+                });
             });
         }
-        
-        function handleTouchEnd(e) {
-            if (e.touches.length === 0) {
-                document.getElementById('touch-pos').textContent = 'none';
-                sendData({
-                    type: 'touch',
-                    x: 0,
-                    y: 0,
-                    touches: 0
+
+        function drawDeviceInfo() {
+            devices.forEach((device, deviceId) => {
+                if (millis() - device.lastSeen > 5000) return; // Skip old devices
+                
+                // Draw target position indicator
+                stroke(device.color, 80, 100, 60);
+                strokeWeight(2);
+                fill(device.color, 50, 30, 30);
+                circle(device.targetX, device.targetY, 60);
+                
+                // Draw device label
+                fill(device.color, 70, 100, 80);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(10);
+                const shortId = deviceId.split('-')[1] || deviceId.slice(-4);
+                text(shortId, device.targetX, device.targetY);
+                
+                // Touch indicator
+                if (device.touching) {
+                    stroke(device.color, 90, 100, 80);
+                    strokeWeight(3);
+                    noFill();
+                    circle(device.targetX, device.targetY, 90);
+                }
+            });
+        }
+
+        function draw() {
+            // Dark background with subtle fade
+            background(240, 30, 8, 20);
+            
+            if (ws && ws.readyState === WebSocket.OPEN && devices.size > 0) {
+                updateParticles();
+                drawParticles();
+                drawDeviceInfo();
+            } else if (devices.size === 0 && ws && ws.readyState === WebSocket.OPEN) {
+                // Show waiting message
+                fill(0, 0, 100, 60);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(24);
+                text("Waiting for phones to connect...", width/2, height/2);
+                textSize(16);
+                text("Visit: hello-world-production-bbc3.up.railway.app", width/2, height/2 + 40);
+            } else {
+                // Connection status
+                fill(0, 0, 100);
+                noStroke();
+                textAlign(CENTER, CENTER);
+                textSize(20);
+                text(connectionStatus, width/2, height/2);
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        function keyPressed() {
+            if (key === 'c' || key === 'C') {
+                // Clear all particles
+                particles.forEach(particleArray => {
+                    particleArray.length = 0;
                 });
+                console.log("Cleared all particles");
+            }
+            
+            if (key === 'r' || key === 'R') {
+                // Reconnect to server
+                if (ws) {
+                    ws.close();
+                }
+                connectToServer();
+                console.log("Reconnecting...");
             }
         }
     </script>
