@@ -1,0 +1,7 @@
+.DS_Store
+
+# no node modules
+/node_modules
+
+# utils are private
+/utils

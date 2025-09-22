@@ -1,0 +1,21 @@
+{
+  "name": "week5-osc",
+  "version": "1.0.0",
+  "description": "A demo file for osc control over web",
+  "keywords": [
+    "osc",
+    "websockets"
+  ],
+    "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "author": "Alex Leitch",
+  "main": "server.js",
+    "type": "module",
+  "dependencies": {
+    "ws": "^8.0.0",
+    "osc-js": "^2.0.0"
+  }
+}
