@@ -1,5 +1,6 @@
 // WebSocket to OSC Bridge Server with HTTP - Railway Compatible
 // Serves phone controller HTML and handles WebSocket connections
+// Now broadcasts device messages to visualization clients (P5, etc.)
 // 
 // Installation:
 // npm install ws osc-js express
@@ -19,11 +20,9 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-
 // Configuration - Railway compatible
 const PORT = process.env.PORT || 8080;
 const OSC_SEND_PORT = 7000;    // OSC output port (TouchDesigner default)
-
 
 // Detect deployment environment
 const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT_NAME !== undefined;
@@ -66,8 +65,9 @@ osc.open();
 // Create WebSocket server attached to HTTP server
 const wss = new WebSocketServer({ server });
 
-// Track connected devices with detailed info
+// Track connected devices and clients
 const devices = new Map();
+const visualizationClients = new Set(); // P5, TouchDesigner, etc.
 let totalConnections = 0;
 let totalMessages = 0;
 const serverStartTime = Date.now();
@@ -80,6 +80,51 @@ const log = (message, level = 'INFO') => {
 
 // Phone Controller HTML (auto-connecting version)
 const phoneControllerHTML = readFileSync(join(__dirname, 'phone-controller.html'), 'utf8');
+
+// Broadcast message to all visualization clients
+const broadcastToVisualizers = (message) => {
+    const messageStr = JSON.stringify(message);
+    visualizationClients.forEach(client => {
+        if (client.readyState === client.OPEN) {
+            try {
+                client.send(messageStr);
+            } catch (error) {
+                log(`Error broadcasting to visualizer: ${error.message}`, 'ERROR');
+                visualizationClients.delete(client);
+            }
+        } else {
+            visualizationClients.delete(client);
+        }
+    });
+};
+
+// Send current device states to a new visualization client
+const sendDeviceStatesToClient = (client) => {
+    devices.forEach((device, deviceId) => {
+        try {
+            client.send(JSON.stringify({
+                type: 'connect',
+                deviceId: deviceId,
+                color: device.color,
+                timestamp: Date.now()
+            }));
+            
+            // Send current orientation if available
+            if (device.lastTiltX !== undefined) {
+                client.send(JSON.stringify({
+                    type: 'orientation',
+                    deviceId: deviceId,
+                    tiltX: device.lastTiltX,
+                    tiltY: device.lastTiltY,
+                    rotate: device.lastRotate,
+                    timestamp: Date.now()
+                }));
+            }
+        } catch (error) {
+            log(`Error sending device state: ${error.message}`, 'ERROR');
+        }
+    });
+};
 
 // Status page HTML
 const statusPageHTML = (devices, totalConnections, totalMessages, serverStartTime) => {
@@ -126,6 +171,7 @@ const statusPageHTML = (devices, totalConnections, totalMessages, serverStartTim
         <p>Total Connections: ${totalConnections}</p>
         <p>Total Messages: ${totalMessages}</p>
         <p>OSC Output: ${OSC_SEND_HOST}:${OSC_SEND_PORT}</p>
+        <p>Visualization Clients: ${visualizationClients.size}</p>
     </div>
     
     <div class="stats">
@@ -173,19 +219,41 @@ app.get('/health', (req, res) => {
         status: 'ok', 
         uptime: Date.now() - serverStartTime,
         devices: devices.size,
+        visualizers: visualizationClients.size,
         messages: totalMessages 
     });
 });
 
-// WebSocket connection handling (same as before)
+// WebSocket connection handling with broadcasting
 wss.on('connection', (ws, request) => {
     const clientIP = request.socket.remoteAddress;
     const connectionId = `conn_${++totalConnections}`;
     let deviceId = null;
+    let isVisualizationClient = false;
     let messageCount = 0;
     const connectTime = Date.now();
     
     log(`New WebSocket connection from ${clientIP} (ID: ${connectionId})`);
+    
+    // Send ping to identify the connection
+    try {
+        ws.send(JSON.stringify({ type: 'ping', message: 'Connection established' }));
+    } catch (error) {
+        log(`Failed to send ping to ${connectionId}: ${error.message}`, 'ERROR');
+    }
+    
+    // Wait a moment to see if this is a phone or visualizer
+    setTimeout(() => {
+        if (!deviceId) {
+            // No device registration received, assume it's a visualization client
+            isVisualizationClient = true;
+            visualizationClients.add(ws);
+            log(`Client identified as visualizer: ${connectionId}`, 'CONNECT');
+            
+            // Send current device states to new visualizer
+            sendDeviceStatesToClient(ws);
+        }
+    }, 2000);
     
     ws.on('message', (data) => {
         try {
@@ -201,12 +269,24 @@ wss.on('connection', (ws, request) => {
                         color: message.color,
                         connected: Date.now(),
                         messageCount: 0,
-                        clientIP
+                        clientIP,
+                        lastTiltX: 0,
+                        lastTiltY: 0,
+                        lastRotate: 0
                     });
                     
                     log(`Device registered: ${deviceId} (Color: ${message.color}°) from ${clientIP}`, 'CONNECT');
                     log(`Active devices: ${devices.size}`);
                     
+                    // Broadcast to visualization clients
+                    broadcastToVisualizers({
+                        type: 'connect',
+                        deviceId: deviceId,
+                        color: message.color,
+                        timestamp: Date.now()
+                    });
+                    
+                    // Send OSC
                     osc.send(new OSC.Message('/device/connected', 
                         deviceId, 
                         message.color / 360.0
@@ -215,12 +295,27 @@ wss.on('connection', (ws, request) => {
                     
                 case 'orientation':
                     if (deviceId) {
-                        devices.get(deviceId).messageCount++;
+                        const device = devices.get(deviceId);
+                        device.messageCount++;
+                        device.lastTiltX = message.tiltX;
+                        device.lastTiltY = message.tiltY;
+                        device.lastRotate = message.rotate;
                         
                         const normalizedX = (message.tiltX + 180) / 360;
                         const normalizedY = (message.tiltY + 90) / 180;
                         const normalizedRotate = message.rotate / 360;
                         
+                        // Broadcast to visualization clients
+                        broadcastToVisualizers({
+                            type: 'orientation',
+                            deviceId: deviceId,
+                            tiltX: message.tiltX,
+                            tiltY: message.tiltY,
+                            rotate: message.rotate,
+                            timestamp: Date.now()
+                        });
+                        
+                        // Send OSC
                         osc.send(new OSC.Message(`/${deviceId}/tiltX`, normalizedX));
                         osc.send(new OSC.Message(`/${deviceId}/tiltY`, normalizedY));
                         osc.send(new OSC.Message(`/${deviceId}/rotate`, normalizedRotate));
@@ -238,6 +333,17 @@ wss.on('connection', (ws, request) => {
                     if (deviceId) {
                         devices.get(deviceId).messageCount++;
                         
+                        // Broadcast to visualization clients
+                        broadcastToVisualizers({
+                            type: 'touch',
+                            deviceId: deviceId,
+                            x: message.x,
+                            y: message.y,
+                            touches: message.touches,
+                            timestamp: Date.now()
+                        });
+                        
+                        // Send OSC
                         osc.send(new OSC.Message(`/${deviceId}/touchX`, message.x));
                         osc.send(new OSC.Message(`/${deviceId}/touchY`, message.y));
                         osc.send(new OSC.Message(`/${deviceId}/touches`, message.touches));
@@ -267,23 +373,32 @@ wss.on('connection', (ws, request) => {
         if (deviceId) {
             log(`Device disconnected: ${deviceId} (${duration}s, ${messageCount} messages, code: ${code})`, 'DISCONNECT');
             devices.delete(deviceId);
+            
+            // Broadcast disconnect to visualization clients
+            broadcastToVisualizers({
+                type: 'disconnect',
+                deviceId: deviceId,
+                timestamp: Date.now()
+            });
+            
+            // Send OSC
             osc.send(new OSC.Message('/device/disconnected', deviceId));
+        } else if (isVisualizationClient) {
+            log(`Visualizer disconnected: ${connectionId} (${duration}s)`, 'DISCONNECT');
+            visualizationClients.delete(ws);
         } else {
             log(`Connection closed: ${connectionId} (${duration}s, no device registered, code: ${code})`, 'DISCONNECT');
         }
         
-        log(`Active devices: ${devices.size}`);
+        log(`Active devices: ${devices.size}, Visualizers: ${visualizationClients.size}`);
     });
     
     ws.on('error', (error) => {
         log(`WebSocket error for ${deviceId || connectionId}: ${error.message}`, 'ERROR');
+        if (isVisualizationClient) {
+            visualizationClients.delete(ws);
+        }
     });
-    
-    try {
-        ws.send(JSON.stringify({ type: 'ping', message: 'Connection established' }));
-    } catch (error) {
-        log(`Failed to send ping to ${connectionId}: ${error.message}`, 'ERROR');
-    }
 });
 
 // Start server
@@ -300,8 +415,8 @@ server.listen(PORT, () => {
 
 // Periodic status reporting
 setInterval(() => {
-    if (devices.size > 0) {
-        log(`Status: ${devices.size} active devices, ${totalMessages} total messages processed`);
+    if (devices.size > 0 || visualizationClients.size > 0) {
+        log(`Status: ${devices.size} active devices, ${visualizationClients.size} visualizers, ${totalMessages} total messages processed`);
         devices.forEach((device, deviceId) => {
             const duration = ((Date.now() - device.connected) / 1000).toFixed(0);
             log(`  ${deviceId}: ${device.messageCount} msgs, ${duration}s connected, color ${device.color}°`);
