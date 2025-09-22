@@ -1,0 +1,170 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#1a1a2e"/>
+  
+  <!-- Title -->
+  <text x="400" y="40" text-anchor="middle" fill="#ffffff" font-size="24" font-weight="bold" font-family="Arial, sans-serif">
+    How Our Phone Controllers Work
+  </text>
+  
+  <!-- Cloud section -->
+  <g id="cloud-section">
+    <!-- Cloud background -->
+    <rect x="250" y="80" width="300" height="120" rx="20" fill="#16213e" stroke="#4a90e2" stroke-width="2"/>
+    <text x="400" y="105" text-anchor="middle" fill="#4a90e2" font-size="16" font-weight="bold" font-family="Arial, sans-serif">
+      THE CLOUD ☁️
+    </text>
+    
+    <!-- Server icon -->
+    <g id="server">
+      <rect x="350" y="120" width="100" height="60" rx="8" fill="#2d4a7a" stroke="#4a90e2" stroke-width="2"/>
+      <rect x="360" y="130" width="80" height="8" rx="2" fill="#4a90e2"/>
+      <rect x="360" y="145" width="80" height="8" rx="2" fill="#4a90e2"/>
+      <rect x="360" y="160" width="80" height="8" rx="2" fill="#4a90e2"/>
+      <text x="400" y="195" text-anchor="middle" fill="#ffffff" font-size="12" font-family="Arial, sans-serif">
+        Railway Server
+      </text>
+    </g>
+  </g>
+  
+  <!-- Phones section -->
+  <g id="phones-section">
+    <text x="150" y="280" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold" font-family="Arial, sans-serif">
+      STUDENTS' PHONES 📱
+    </text>
+    
+    <!-- Phone 1 -->
+    <g id="phone1" transform="translate(50, 300)">
+      <rect width="60" height="100" rx="12" fill="#333" stroke="#fff" stroke-width="2"/>
+      <rect x="5" y="10" width="50" height="80" rx="4" fill="#4CAF50"/>
+      <circle cx="30" cy="70" r="20" fill="#66BB6A" opacity="0.7"/>
+      <text x="30" y="76" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        Alice
+      </text>
+    </g>
+    
+    <!-- Phone 2 -->
+    <g id="phone2" transform="translate(150, 300)">
+      <rect width="60" height="100" rx="12" fill="#333" stroke="#fff" stroke-width="2"/>
+      <rect x="5" y="10" width="50" height="80" rx="4" fill="#FF5722"/>
+      <circle cx="30" cy="70" r="20" fill="#FF7043" opacity="0.7"/>
+      <text x="30" y="76" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        Bob
+      </text>
+    </g>
+    
+    <!-- Phone 3 -->
+    <g id="phone3" transform="translate(250, 300)">
+      <rect width="60" height="100" rx="12" fill="#333" stroke="#fff" stroke-width="2"/>
+      <rect x="5" y="10" width="50" height="80" rx="4" fill="#9C27B0"/>
+      <circle cx="30" cy="70" r="20" fill="#BA68C8" opacity="0.7"/>
+      <text x="30" y="76" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        Chen
+      </text>
+    </g>
+  </g>
+  
+  <!-- Visualization options -->
+  <g id="viz-section">
+    <text x="650" y="280" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold" font-family="Arial, sans-serif">
+      VISUALIZATION OPTIONS
+    </text>
+    
+    <!-- P5 Live -->
+    <g id="p5live" transform="translate(550, 300)">
+      <rect width="80" height="60" rx="8" fill="#ed225d" stroke="#fff" stroke-width="2"/>
+      <text x="590" y="320" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="Arial, sans-serif">
+        P5 Live
+      </text>
+      <text x="590" y="335" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        (Online)
+      </text>
+      <text x="590" y="350" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        Performance
+      </text>
+    </g>
+    
+    <!-- Local Computer -->
+    <g id="local-computer" transform="translate(650, 300)">
+      <rect width="80" height="60" rx="8" fill="#607d8b" stroke="#fff" stroke-width="2"/>
+      <rect x="658" y="308" width="64" height="8" rx="2" fill="#90a4ae"/>
+      <rect x="658" y="320" width="64" height="8" rx="2" fill="#90a4ae"/>
+      <rect x="658" y="332" width="64" height="8" rx="2" fill="#90a4ae"/>
+      <text x="690" y="375" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial, sans-serif">
+        Your Laptop
+      </text>
+    </g>
+  </g>
+  
+  <!-- Connection arrows and labels -->
+  <!-- Phones to server -->
+  <g id="connections">
+    <!-- Phone 1 to server -->
+    <path d="M 110 340 Q 200 280 350 150" fill="none" stroke="#4CAF50" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <text x="180" y="260" fill="#4CAF50" font-size="11" font-family="Arial, sans-serif">
+      "I'm tilting!"
+    </text>
+    
+    <!-- Phone 2 to server -->
+    <path d="M 180 340 Q 250 280 380 150" fill="none" stroke="#FF5722" stroke-width="3" marker-end="url(#arrowRed)"/>
+    <text x="240" y="240" fill="#FF5722" font-size="11" font-family="Arial, sans-serif">
+      "I'm touching!"
+    </text>
+    
+    <!-- Phone 3 to server -->
+    <path d="M 250 340 Q 300 280 420 150" fill="none" stroke="#9C27B0" stroke-width="3" marker-end="url(#arrowPurple)"/>
+    <text x="300" y="260" fill="#9C27B0" font-size="11" font-family="Arial, sans-serif">
+      "I'm rotating!"
+    </text>
+    
+    <!-- Server to visualizations -->
+    <path d="M 450 150 Q 500 200 550 320" fill="none" stroke="#4a90e2" stroke-width="3" marker-end="url(#arrowBlue)"/>
+    <path d="M 450 150 Q 520 200 650 320" fill="none" stroke="#4a90e2" stroke-width="3" marker-end="url(#arrowBlue)"/>
+    
+    <text x="500" y="220" fill="#4a90e2" font-size="11" font-family="Arial, sans-serif">
+      "Alice is tilting,
+    </text>
+    <text x="500" y="235" fill="#4a90e2" font-size="11" font-family="Arial, sans-serif">
+      Bob is touching,
+    </text>
+    <text x="500" y="250" fill="#4a90e2" font-size="11" font-family="Arial, sans-serif">
+      Chen is rotating!"
+    </text>
+  </g>
+  
+  <!-- Key concepts -->
+  <g id="key-concepts">
+    <rect x="50" y="480" width="700" height="100" rx="10" fill="#0f1419" stroke="#4a90e2" stroke-width="2"/>
+    <text x="70" y="505" fill="#4a90e2" font-size="14" font-weight="bold" font-family="Arial, sans-serif">
+      KEY CONCEPTS:
+    </text>
+    
+    <text x="70" y="525" fill="#ffffff" font-size="12" font-family="Arial, sans-serif">
+      1. The cloud server is like a DJ booth - it receives everyone's moves and broadcasts them out
+    </text>
+    
+    <text x="70" y="545" fill="#ffffff" font-size="12" font-family="Arial, sans-serif">
+      2. Phones don't talk to each other directly - they all talk to the cloud server
+    </text>
+    
+    <text x="70" y="565" fill="#ffffff" font-size="12" font-family="Arial, sans-serif">
+      3. Any visualization (P5 Live, your laptop, TouchDesigner) can "listen in" to see what all phones are doing
+    </text>
+  </g>
+  
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#FF5722"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#9C27B0"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a90e2"/>
+    </marker>
+  </defs>
+</svg>
