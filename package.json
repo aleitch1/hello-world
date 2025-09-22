@@ -6,16 +6,17 @@
     "osc",
     "websockets"
   ],
-    "scripts": {
+  "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "license": "MIT",
   "author": "Alex Leitch",
   "main": "server.js",
-    "type": "module",
+  "type": "module",
   "dependencies": {
-    "ws": "^8.0.0",
-    "osc-js": "^2.0.0"
+    "express": "^5.1.0",
+    "osc-js": "^2.0.0",
+    "ws": "^8.0.0"
   }
 }
