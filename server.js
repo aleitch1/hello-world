@@ -23,7 +23,7 @@ const __dirname = dirname(__filename);
 // Configuration - Railway compatible
 const PORT = process.env.PORT || 8080;
 const OSC_SEND_PORT = 7000;    // OSC output port (TouchDesigner default)
-const OSC_SEND_HOST = '127.0.0.1';
+
 
 // Detect deployment environment
 const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT_NAME !== undefined;
@@ -43,6 +43,7 @@ if (IS_RAILWAY) {
     BASE_URL = `http://localhost:${PORT}`;
 }
 
+const OSC_SEND_HOST = BASE_URL;
 const WS_URL = BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
 
 // Create Express app and HTTP server
